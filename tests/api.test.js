@@ -1,6 +1,16 @@
 process.env.NODE_ENV = 'test';
 process.env.TEST_AUTH_BYPASS = 'true';
 
+jest.mock('../utils/cloudinary', () => ({
+  uploadImage: jest.fn().mockResolvedValue({
+    public_id: 'tickets/photo_test_abc123',
+    secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/tickets/photo_test_abc123.png',
+    url: 'https://res.cloudinary.com/demo/image/upload/v1/tickets/photo_test_abc123.png',
+  }),
+  deleteImage: jest.fn().mockResolvedValue({ result: 'ok' }),
+}));
+const { uploadImage, deleteImage } = require('../utils/cloudinary');
+
 const request = require('supertest');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
@@ -442,6 +452,54 @@ describe('internal ticketing API', () => {
     expect(commentRes.status).toBe(201);
     expect(archiveRes.status).toBe(200);
     expect(reportRes.status).toBe(200);
+  });
+
+  test('manager can upload and delete ticket photos', async () => {
+    uploadImage.mockClear();
+    deleteImage.mockClear();
+
+    const { departments, users } = await seedBaseData();
+
+    const createRes = await request(app)
+      .post('/api/tickets')
+      .set(auth(users.manager))
+      .send({
+        title: 'Photo ticket',
+        description: 'Ticket with image',
+        assignedDepartmentId: departments.it._id,
+        priority: 'high',
+      });
+
+    expect(createRes.status).toBe(201);
+    const ticketId = createRes.body.data.ticket._id;
+
+    const uploadRes = await request(app)
+      .post(`/api/tickets/${ticketId}/photos`)
+      .set(auth(users.manager))
+      .attach('photo', Buffer.from('fake-image'), {
+        filename: 'screenshot.png',
+        contentType: 'image/png',
+      })
+      .field('caption', 'Ticket screenshot');
+
+    expect(uploadRes.status).toBe(201);
+    expect(uploadImage).toHaveBeenCalled();
+    expect(uploadRes.body.data.photo.url).toContain('https://res.cloudinary.com');
+    expect(uploadRes.body.data.photo.publicId).toBe('tickets/photo_test_abc123');
+    expect(uploadRes.body.data.photo._id).toBeDefined();
+
+    const photoId = uploadRes.body.data.photo._id;
+
+    const photosRes = await request(app).get(`/api/tickets/${ticketId}/photos`).set(auth(users.manager));
+    expect(photosRes.status).toBe(200);
+    expect(photosRes.body.data.photos).toHaveLength(1);
+
+    const deleteRes = await request(app)
+      .delete(`/api/tickets/${ticketId}/photos/${photoId}`)
+      .set(auth(users.manager));
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteImage).toHaveBeenCalledWith('tickets/photo_test_abc123');
   });
 
   test('sync creates an employee profile from verified identity context', async () => {

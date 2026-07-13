@@ -101,6 +101,46 @@ const ticketSchema = new mongoose.Schema(
         trim: true,
       },
     ],
+    photos: [
+      {
+        publicId: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        url: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        filename: {
+          type: String,
+          trim: true,
+        },
+        contentType: {
+          type: String,
+          trim: true,
+        },
+        size: {
+          type: Number,
+          default: 0,
+        },
+        caption: {
+          type: String,
+          trim: true,
+          default: '',
+        },
+        uploadedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     isArchived: {
       type: Boolean,
       default: false,

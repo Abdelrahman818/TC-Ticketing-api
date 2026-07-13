@@ -4,6 +4,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { success } = require('../utils/apiResponse');
 const HttpError = require('../utils/httpError');
 const { writeAuditLog } = require('../utils/audit');
+const { uploadImage, deleteImage } = require('../utils/cloudinary');
 const { buildTicketScopeQuery, canAccessTicket, assertCanAssignUser } = require('../services/access.service');
 
 async function getDefaultStage() {
@@ -89,6 +90,12 @@ async function getScopedTicketOrThrow(user, ticketId) {
   }
 
   return ticket;
+}
+
+function assertCanModifyTicketPhotos(user, ticket) {
+  if (user.role === 'employee' && String(ticket.assignedUserId || '') !== String(user._id)) {
+    throw new HttpError(403, 'Employees can modify photos only on tickets directly assigned to them', 'FORBIDDEN');
+  }
 }
 
 const createTicket = asyncHandler(async (req, res) => {
@@ -217,6 +224,73 @@ const getTicketById = asyncHandler(async (req, res) => {
   ]);
 
   return success(res, 'Ticket fetched successfully', { ticket });
+});
+
+const getTicketPhotos = asyncHandler(async (req, res) => {
+  const ticket = await getScopedTicketOrThrow(req.user, req.params.ticketId);
+  return success(res, 'Ticket photos fetched successfully', { photos: ticket.photos || [] });
+});
+
+const uploadTicketPhoto = asyncHandler(async (req, res) => {
+  const ticket = await getScopedTicketOrThrow(req.user, req.params.ticketId);
+  assertCanModifyTicketPhotos(req.user, ticket);
+
+  if (!req.file || !req.file.buffer) {
+    throw new HttpError(400, 'No photo file was provided', 'PHOTO_REQUIRED');
+  }
+
+  const result = await uploadImage(req.file.buffer, req.file.originalname, `tickets/${ticket._id}`);
+  const photo = {
+    publicId: result.public_id,
+    url: result.secure_url || result.url,
+    filename: req.file.originalname,
+    contentType: req.file.mimetype,
+    size: req.file.size,
+    caption: typeof req.body.caption === 'string' ? req.body.caption.trim() : '',
+    uploadedBy: req.user._id,
+    createdAt: new Date(),
+  };
+
+  ticket.photos = ticket.photos || [];
+  ticket.photos.push(photo);
+  await ticket.save();
+
+  const savedPhoto = ticket.photos[ticket.photos.length - 1];
+  await writeAuditLog({
+    actorId: req.user._id,
+    action: 'ticket_photo_uploaded',
+    entityType: 'ticket',
+    entityId: ticket._id,
+    after: ticket.toObject(),
+  });
+
+  return success(res, 'Ticket photo uploaded successfully', { photo: savedPhoto }, 201);
+});
+
+const deleteTicketPhoto = asyncHandler(async (req, res) => {
+  const ticket = await getScopedTicketOrThrow(req.user, req.params.ticketId);
+  assertCanModifyTicketPhotos(req.user, ticket);
+
+  const photo = ticket.photos?.id(req.params.photoId);
+  if (!photo) {
+    throw new HttpError(404, 'Ticket photo not found', 'PHOTO_NOT_FOUND');
+  }
+
+  const before = ticket.toObject();
+  await deleteImage(photo.publicId);
+  ticket.photos = ticket.photos.filter((item) => String(item._id) !== String(req.params.photoId));
+  await ticket.save();
+
+  await writeAuditLog({
+    actorId: req.user._id,
+    action: 'ticket_photo_deleted',
+    entityType: 'ticket',
+    entityId: ticket._id,
+    before,
+    after: ticket.toObject(),
+  });
+
+  return success(res, 'Ticket photo deleted successfully', { photoId: req.params.photoId });
 });
 
 const updateTicket = asyncHandler(async (req, res) => {
@@ -383,6 +457,10 @@ const deleteTicket = asyncHandler(async (req, res) => {
     throw new HttpError(404, 'Ticket was not found', 'TICKET_NOT_FOUND');
   }
 
+  if (ticket.photos?.length) {
+    await Promise.all(ticket.photos.map((photo) => deleteImage(photo.publicId)));
+  }
+
   await Ticket.deleteOne({ _id: ticket._id });
   await Comment.deleteMany({ ticketId: ticket._id });
   await writeAuditLog({
@@ -405,6 +483,9 @@ module.exports = {
   deleteTicket,
   getTicketById,
   getTicketComments,
+  getTicketPhotos,
   getTickets,
+  uploadTicketPhoto,
+  deleteTicketPhoto,
   updateTicket,
 };
