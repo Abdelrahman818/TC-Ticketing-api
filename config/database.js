@@ -2,10 +2,15 @@ const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 let memoryServer;
+let cachedConnectionPromise = null;
 
 async function connectDatabase(uri = process.env.MONGO_URI) {
   if (mongoose.connection.readyState === 1) {
     return mongoose.connection;
+  }
+
+  if (cachedConnectionPromise) {
+    return cachedConnectionPromise;
   }
 
   if (!uri) {
@@ -23,8 +28,8 @@ async function connectDatabase(uri = process.env.MONGO_URI) {
     process.env.MONGO_URI = uri;
   }
 
-  await mongoose.connect(uri);
-  return mongoose.connection;
+  cachedConnectionPromise = mongoose.connect(uri).then(() => mongoose.connection);
+  return cachedConnectionPromise;
 }
 
 async function disconnectDatabase() {
@@ -36,6 +41,8 @@ async function disconnectDatabase() {
     await memoryServer.stop();
     memoryServer = null;
   }
+
+  cachedConnectionPromise = null;
 }
 
 module.exports = {
