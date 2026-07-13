@@ -29,7 +29,7 @@ function buildUserFilters(query) {
 }
 
 const getAssignableUsers = asyncHandler(async (req, res) => {
-  if (!['supervisor', 'manager', 'owner'].includes(req.user.role)) {
+  if (!['supervisor', 'manager', 'controller', 'owner'].includes(req.user.role)) {
     throw new HttpError(403, 'You do not have permission to list assignable users', 'FORBIDDEN');
   }
 

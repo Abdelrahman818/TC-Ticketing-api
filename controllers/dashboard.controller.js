@@ -200,7 +200,7 @@ const getSupervisorDashboard = asyncHandler(async (req, res) => {
   );
 
   let managersData = [];
-  if (req.user.role === 'owner') {
+  if (req.user.role === 'controller' || req.user.role === 'owner') {
     const managers = await User.find({ role: 'manager', isActive: true }).select('name email');
     managersData = await Promise.all(
       managers.map(async (mgr) => {
@@ -227,15 +227,15 @@ const getSupervisorDashboard = asyncHandler(async (req, res) => {
 });
 
 const getSystemDashboard = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'owner') {
-    throw new HttpError(403, 'Only owners can access the system dashboard', 'FORBIDDEN');
+  if (req.user.role !== 'controller' && req.user.role !== 'owner') {
+    throw new HttpError(403, 'Only controllers can access the system dashboard', 'FORBIDDEN');
   }
 
-  const [employees, supervisors, managers, owners, departments, tickets] = await Promise.all([
+  const [employees, supervisors, managers, controllers, departments, tickets] = await Promise.all([
     User.countDocuments({ role: 'employee', isActive: true }),
     User.countDocuments({ role: 'supervisor', isActive: true }),
     User.countDocuments({ role: 'manager', isActive: true }),
-    User.countDocuments({ role: 'owner', isActive: true }),
+    User.countDocuments({ $or: [{ role: 'controller' }, { role: 'owner' }], isActive: true }),
     Department.countDocuments({ isActive: true }),
     summarizeTickets({}),
   ]);
@@ -245,7 +245,7 @@ const getSystemDashboard = asyncHandler(async (req, res) => {
       employees,
       supervisors,
       managers,
-      owners,
+      controllers,
     },
     tickets: {
       total: tickets.totalTickets,

@@ -24,7 +24,7 @@ const updateUser = Joi.object({
 }).min(1);
 
 const updateRole = Joi.object({
-  role: Joi.string().valid('employee', 'supervisor', 'manager', 'owner').required(),
+  role: Joi.string().valid('employee', 'supervisor', 'manager', 'controller', 'owner').required(),
 });
 
 module.exports = {

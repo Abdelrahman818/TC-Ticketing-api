@@ -23,7 +23,7 @@ async function getTeamEmployeeIds(supervisorId, departmentId = null) {
 }
 
 async function buildTicketScopeQuery(user) {
-  if (['manager', 'owner'].includes(user.role)) {
+  if (['manager', 'controller', 'owner'].includes(user.role)) {
     return {};
   }
 
@@ -51,7 +51,7 @@ async function buildAssignableUsersQuery(user, departmentId = null) {
     role: { $in: ['employee', 'supervisor'] },
   };
 
-  if (['manager', 'owner'].includes(user.role)) {
+  if (['manager', 'controller', 'owner'].includes(user.role)) {
     if (departmentId) {
       baseQuery.departmentId = departmentId;
     }
@@ -114,7 +114,7 @@ async function canAccessTicket(user, ticket) {
     return false;
   }
 
-  if (['manager', 'owner'].includes(user.role)) {
+  if (['manager', 'controller', 'owner'].includes(user.role)) {
     return true;
   }
 

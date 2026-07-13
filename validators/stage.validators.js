@@ -9,7 +9,7 @@ const createStage = Joi.object({
   isDefault: Joi.boolean().default(false),
   isFinal: Joi.boolean().default(false),
   isActive: Joi.boolean().default(true),
-  visibleToRoles: Joi.array().items(Joi.string().valid('employee', 'supervisor', 'manager', 'owner')).default(['employee', 'supervisor', 'manager', 'owner']),
+  visibleToRoles: Joi.array().items(Joi.string().valid('employee', 'supervisor', 'manager', 'controller', 'owner')).default(['employee', 'supervisor', 'manager', 'controller', 'owner']),
 });
 
 const updateStage = Joi.object({
@@ -19,7 +19,7 @@ const updateStage = Joi.object({
   isDefault: Joi.boolean(),
   isFinal: Joi.boolean(),
   isActive: Joi.boolean(),
-  visibleToRoles: Joi.array().items(Joi.string().valid('employee', 'supervisor', 'manager', 'owner')),
+  visibleToRoles: Joi.array().items(Joi.string().valid('employee', 'supervisor', 'manager', 'controller', 'owner')),
 }).min(1);
 
 const reorderStages = Joi.object({

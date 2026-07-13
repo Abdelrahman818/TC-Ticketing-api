@@ -39,9 +39,9 @@ const stageSchema = new mongoose.Schema(
     },
     visibleToRoles: {
       type: [String],
-      default: ['employee', 'supervisor', 'manager', 'owner'],
+      default: ['employee', 'supervisor', 'manager', 'controller', 'owner'],
       validate: {
-        validator: (roles) => roles.every((role) => ['employee', 'supervisor', 'manager', 'owner'].includes(role)),
+        validator: (roles) => roles.every((role) => ['employee', 'supervisor', 'manager', 'controller', 'owner'].includes(role)),
         message: 'visibleToRoles must contain valid roles',
       },
     },

@@ -64,10 +64,10 @@ const syncProfile = asyncHandler(async (req, res) => {
 
 const createUser = asyncHandler(async (req, res) => {
   const existingUsers = await User.countDocuments();
-  const isBootstrapOwner = existingUsers === 0 && req.body.role === 'owner';
+  const isBootstrapController = existingUsers === 0 && (req.body.role === 'controller' || req.body.role === 'owner');
 
-  if (!isBootstrapOwner && (!req.user || req.user.role !== 'owner')) {
-    throw new HttpError(403, 'Only owner can create users', 'FORBIDDEN');
+  if (!isBootstrapController && (!req.user || (req.user.role !== 'controller' && req.user.role !== 'owner'))) {
+    throw new HttpError(403, 'Only controllers can create users', 'FORBIDDEN');
   }
 
   const user = await User.create({
@@ -119,7 +119,7 @@ const devLogin = asyncHandler(async (req, res) => {
     user = await User.create({
       name: email.split('@')[0],
       email,
-      role: existingUsers === 0 ? 'owner' : 'employee',
+      role: existingUsers === 0 ? 'controller' : 'employee',
     });
   }
 
@@ -150,7 +150,7 @@ const devRegister = asyncHandler(async (req, res) => {
   const user = await User.create({
     name: name || email.split('@')[0],
     email,
-    role: existingUsers === 0 ? 'owner' : 'employee',
+    role: existingUsers === 0 ? 'controller' : 'employee',
   });
 
   return success(res, 'Account created successfully', { token: `dev-token:${email}`, user }, 201);
