@@ -13,6 +13,7 @@ const stageRoutes = require('./routes/stages.route');
 const dashboardRoutes = require('./routes/dashboard.route');
 const reportRoutes = require('./routes/reports.route');
 const auditLogRoutes = require('./routes/auditLogs.route');
+const healthRoutes = require('./routes/health.route');
 
 const { connectDatabase } = require('./config/database');
 const { ensureDefaultStages } = require('./services/bootstrap.service');
@@ -39,6 +40,7 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/users', userRoutes);
