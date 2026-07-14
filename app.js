@@ -13,11 +13,12 @@ const stageRoutes = require('./routes/stages.route');
 const dashboardRoutes = require('./routes/dashboard.route');
 const reportRoutes = require('./routes/reports.route');
 const auditLogRoutes = require('./routes/auditLogs.route');
-const healthRoutes = require('./routes/health.route');
+const testRoutes = require('./routes/test.route');
 
 const { connectDatabase } = require('./config/database');
 const { ensureDefaultStages } = require('./services/bootstrap.service');
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
+const ensureDBConnection = require('./middlewares/db.middleware');
 
 // Initializing
 dotenv.config();
@@ -28,6 +29,9 @@ app.use(helmet());
 app.use(express.json());
 app.use(cors());
 app.use(cookies());
+
+// Ensure database connection for all API requests
+app.use(ensureDBConnection);
 
 // Routes
 app.get('/health', (req, res) => {
@@ -40,7 +44,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.use('/health', healthRoutes);
+app.use('/api/test', testRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/users', userRoutes);

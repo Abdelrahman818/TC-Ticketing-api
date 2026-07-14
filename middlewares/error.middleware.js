@@ -21,12 +21,25 @@ function errorHandler(err, req, res, next) {
     return error(res, 409, 'Duplicated value already exists', 'DUPLICATE_VALUE', err.keyValue);
   }
 
+  // Handle MongoDB connection errors
+  if (err.name === 'MongooseServerSelectionError' || err.name === 'MongoNetworkError') {
+    console.error('Database connection error:', err.message);
+    return error(res, 503, 'Database service temporarily unavailable', 'DB_CONNECTION_ERROR');
+  }
+
   const statusCode = err.statusCode || 500;
   const code = err.code || 'INTERNAL_SERVER_ERROR';
-  const message = statusCode === 500 ? 'Internal server error' : err.message;
+  // In development, show actual error message; in production, show generic message
+  const message = process.env.NODE_ENV === 'development' ? err.message : (statusCode === 500 ? 'Internal server error' : err.message);
 
   if (statusCode === 500 && process.env.NODE_ENV !== 'test') {
-    console.error(err);
+    console.error('[ERROR]', {
+      name: err.name,
+      message: err.message,
+      code: err.code,
+      statusCode,
+      stack: err.stack,
+    });
   }
 
   return error(res, statusCode, message, code, err.details || null);

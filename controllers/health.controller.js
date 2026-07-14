@@ -12,20 +12,27 @@ const checkDatabaseConnection = asyncHandler(async (req, res) => {
     3: 'disconnecting',
   };
 
-  if (readyState === 1) {
-    return success(res, 'Database connection is healthy', {
-      status: 'connected',
-      readyState,
-      database: mongoose.connection.db.getName(),
-      host: mongoose.connection.host,
-      port: mongoose.connection.port,
-    });
-  }
-
-  return error(res, 503, `Database connection failed: ${states[readyState]}`, 'DB_CONNECTION_ERROR', {
+  const connectionInfo = {
     status: states[readyState],
     readyState,
-  });
+    timestamp: new Date().toISOString(),
+  };
+
+  if (readyState === 1) {
+    connectionInfo.database = mongoose.connection.db?.getName() || 'unknown';
+    connectionInfo.host = mongoose.connection.host;
+    connectionInfo.port = mongoose.connection.port;
+    
+    return success(res, 'Database connection is healthy', connectionInfo);
+  }
+
+  return error(
+    res,
+    503,
+    `Database is ${states[readyState]}`,
+    'DB_CONNECTION_ERROR',
+    connectionInfo
+  );
 });
 
 module.exports = {
