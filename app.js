@@ -27,8 +27,16 @@ const app = express();
 
 app.use(helmet());
 app.use(express.json());
-app.use(cors());
 app.use(cookies());
+app.use(
+  cors({
+    origin: [
+      'https://technology-craft.com',
+      'https://tickets.technology-craft.com',
+    ],
+    credentials: true,
+  })
+);
 
 // Ensure database connection for all API requests
 app.use(ensureDBConnection);
