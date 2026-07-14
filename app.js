@@ -32,7 +32,6 @@ app.use(
   cors({
     origin: [
       'https://technology-craft.com',
-      'https://tickets.technology-craft.com',
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
